@@ -1,2 +1,0 @@
-# Campamentos
-Un pequeño test
