@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<link href="https://fonts.googleapis.com/css?family=Ranga" rel="stylesheet">
+
+<html>
+
+	<style>
+      #map {
+        width: 100%;
+        height: 400px;
+        background-color: grey;
+      }
+
+      #search-info-box{
+      	position: relative;
+      	font-size: 20px;
+      	width: 80%;
+      	background-color:rgba(255, 255, 255, 0.8);
+      	margin-top: 15px;
+      	padding-left: 15px;
+      }
+
+      body{
+      	font-family: 'Ranga', cursive;
+      	background-image: url("img/pattern.jpg");
+    	background-repeat: repeat;
+      }
+
+      table{
+      	width: 100%;
+      	background-color:rgba(255, 255, 255, 0.8);
+      }
+
+    </style>
+
+<body>
+
+	<table >
+		<tr>
+			<td style="width: 60px;">
+				<img src="img/descarga.jpg">
+			</td>
+			<td  style="width: 60px;">
+				<div>
+					<span style="font-size: 20px;">Ingrese radio de Búsqueda</span>
+					<input type="text" maxlength="6" id="searchTxt"/> <br>
+					<button onclick="getLocation()">Buscar campamentos</button>
+				</div>
+			</td>
+			<td>
+				<div id="search-info-box">
+					<span id="title">Parámetros de búsqueda</span>
+					<p id="coordinates"></p>
+				</div>
+			</td>
+		</tr>
+	</table>
+
+	<div id="map"></div>
+
+<script>
+
+	var map;
+	var x = document.getElementById('coordinates');
+	var longitude;
+	var latitude;
+	var markers = [];
+	var camps = [];
+
+    function initMap() {
+    	var pos;
+
+    	var options = {
+  		enableHighAccuracy: true,
+  		timeout: 5000,
+  		maximumAge: 0
+		};
+
+		function success(pos) {
+		  var crd = pos.coords;
+		  latitude = crd.latitude;
+		  longitude = crd.longitude;
+		  map = new google.maps.Map(document.getElementById('map'), {
+		          zoom: 2,
+		          center: {lat: crd.latitude, lng: crd.longitude},
+		          mapTypeId: 'terrain'
+		      });
+		};
+
+		function error(err) {
+		  console.warn('ERROR(' + err.code + '): ' + err.message);
+		};
+
+		navigator.geolocation.getCurrentPosition(success, error, options);
+    }
+    
+
+    function getLocation(){
+		if (navigator.geolocation) {
+	        //navigator.geolocation.watchPosition(showPosition);
+    		
+    		try {
+    			var inp = document.getElementById("searchTxt").value;
+    			if(inp == null || inp.length == 0){
+    				inp = 100;
+    			}
+    			var Httpreq = new XMLHttpRequest(); // a new request
+			    Httpreq.open("GET",'http://127.0.0.1:9000/?latitud='+latitude+'&longitud='+longitude+'&radio='+inp+'',false);
+			    Httpreq.send(null);
+			    console.log(Httpreq.responseText);
+			    var json_obj = JSON.parse(Httpreq.responseText);
+
+			    x.innerHTML = "Latitud (actual): " + latitude + 
+	    			"<br>Longitud (actual): " + longitude + 
+	    			"<br>Radio: " + inp +
+	    			"<br>campamentos en radio: " + (json_obj.length-1);
+
+			    camps = [];
+				for (var i = json_obj.length - 1; i >= 0; i--) {
+			         camps[i] = json_obj;
+				}
+			    reloadMarkers();
+			}
+			catch(err) {
+			    x.innerHTML = "Servicio no disponible, no se logró recuperar campamentos de la BD: <br>" + err.message;
+			}
+		    
+
+	    } else {
+	        x.innerHTML = "Geolocalización no sopotada por el browser";
+	    }
+    }
+
+    function setMarkers(locations) {
+	    for (var i = 0; i < locations.length; i++) {
+	    	json_obj = locations[i];
+	        var latLng = new google.maps.LatLng(json_obj[i].LATITUD,json_obj[i].LONGITUD);
+		    var marker = new google.maps.Marker({
+		            	position: latLng,
+		            	map: map,
+		            	title: json_obj[i].Campamento,
+		            	animation: google.maps.Animation.DROP
+         	});
+	        markers.push(marker);
+    	}
+	}
+
+
+    function reloadMarkers() {
+ 
+    	// Loop through markers and set map to null for each
+    	for (var i=0; i<markers.length; i++) {
+        	markers[i].setMap(null);
+    	}
+    
+    	// Reset the markers array
+   	 	markers = [];
+    
+    	// Call set markers to re-add markers
+    	setMarkers(camps);
+	}
+
+</script>
+
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSmJ3T4l0XlMlSkoO7C422ECCCG6U_9ws&callback=initMap">
+    </script>
+
+</body>
+</html>
